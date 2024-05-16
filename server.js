@@ -1,61 +1,79 @@
+require('dotenv').config(); // Load environment variables from .env file
+
 const express = require('express');
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 const ShortURL = require('./models/shortUrl');
 const app = express();
 
-mongoose.connect('mongodb+srv://sanketbanerjee2004:202004@cluster0.ewfcad3.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-});
+console.log("MONGODB_URI:", process.env.MONGODB_URI); // Check the value of MONGODB_URI
 
-app.set('view engine', 'ejs');
-app.use(express.static(__dirname + '/public'));
-app.use(express.urlencoded({ extended: false }));  // middleware to parse the url encoded data
+// MongoDB connection log
+mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => {
+        console.log("MongoDB connected successfully");
+    })
+    .catch((err) => {
+        console.error("MongoDB connection error:", err);
+    });
 
+app.use(express.json()); // Middleware to parse JSON data
 
-app.get('/', async (req, res) => {
-    const shortUrls = await ShortURL.find()
-    res.render('index', { shortUrls: shortUrls });
-})
-
-app.post('/shortUrls', async (req, res) => {
-    await ShortURL.create({ full: req.body.fullUrl })
-    res.redirect('/')
-})
-
-// Delete route for a specific short URL
-app.post('/shortUrls/:id/delete', async (req, res) => {
+// Route to get all short URLs
+app.get('/api/shortUrls', async (req, res) => {
     try {
-        // Find the short URL by its ID and delete it
-        await ShortURL.findByIdAndDelete(req.params.id);
-        res.redirect('/');
+        const shortUrls = await ShortURL.find();
+        res.json(shortUrls);
     } catch (error) {
         console.error('Error:', error);
-        res.sendStatus(500); // Internal Server Error
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// Route to create a short URL
+app.post('/api/shortUrls', async (req, res) => {
+    try {
+        const { fullUrl, creator } = req.body;
+        const newShortUrl = await ShortURL.create({ full: fullUrl, creator: creator });
+        console.log('Short URL created:', newShortUrl);
+        res.status(201).json(newShortUrl);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
 
+// Route to delete a specific short URL
+app.delete('/api/shortUrls/:id', async (req, res) => {
+    try {
+        await ShortURL.findByIdAndDelete(req.params.id);
+        console.log('Short URL deleted:', req.params.id);
+        res.sendStatus(204);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// Route to redirect to the original URL using the short URL
 app.get('/:shortUrl', async (req, res) => {
     try {
-        const shortUrl = await ShortURL.findOne({ short: req.params.shortUrl }); // Use ShortURL instead of shortUrl
-
-        if (shortUrl == null) return res.sendStatus(404);
-
+        const shortUrl = await ShortURL.findOne({ short: req.params.shortUrl });
+        if (shortUrl == null) {
+            console.warn('Short URL not found:', req.params.shortUrl);
+            return res.sendStatus(404);
+        }
         shortUrl.clicks++;
         await shortUrl.save();
-
+        console.log('Redirecting to:', shortUrl.full);
         res.redirect(shortUrl.full);
     } catch (error) {
         console.error('Error:', error);
-        res.sendStatus(500); // Internal Server Error
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
-
-app.listen(process.env.PORT || 5000);
-
-
-
-// 12345678@
-// sanketbanerjee2004
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
