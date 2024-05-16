@@ -73,6 +73,19 @@ app.get('/:shortUrl', async (req, res) => {
     }
 });
 
+// Route to get all short URLs with all details
+app.get('/api/shortUrls/all', async (req, res) => {
+    try {
+        const shortUrls = await ShortURL.find();
+        res.json(shortUrls);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
