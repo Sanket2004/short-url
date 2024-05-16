@@ -2,10 +2,14 @@ require('dotenv').config(); // Load environment variables from .env file
 
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors'); // Import cors
 const ShortURL = require('./models/shortUrl');
 const app = express();
 
 console.log("MONGODB_URI:", process.env.MONGODB_URI); // Check the value of MONGODB_URI
+
+// Use CORS middleware
+app.use(cors());
 
 // MongoDB connection log
 mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -19,7 +23,7 @@ mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTop
 app.use(express.json()); // Middleware to parse JSON data
 
 // Route to get all short URLs
-app.get('/api/shortUrls', async (req, res) => {
+app.get('/api/shortUrls/all', async (req, res) => {
     try {
         const shortUrls = await ShortURL.find();
         res.json(shortUrls);
@@ -41,7 +45,6 @@ app.post('/api/shortUrls', async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
-
 
 // Route to delete a specific short URL
 app.delete('/api/shortUrls/:id', async (req, res) => {
@@ -72,19 +75,6 @@ app.get('/:shortUrl', async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
-
-// Route to get all short URLs with all details
-app.get('/api/shortUrls/all', async (req, res) => {
-    try {
-        const shortUrls = await ShortURL.find();
-        res.json(shortUrls);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
-
-
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
