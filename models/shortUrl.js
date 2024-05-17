@@ -1,6 +1,14 @@
 const mongoose = require('mongoose');
 const shortId = require('shortid');
 
+const generateUniqueShortId = () => {
+    let id;
+    do {
+        id = shortId.generate();
+    } while (id.length < 4 || id.length > 6);
+    return id;
+};
+
 const shortUrlSchema = new mongoose.Schema({
     full: {
         type: String,
@@ -9,7 +17,7 @@ const shortUrlSchema = new mongoose.Schema({
     short: {
         type: String,
         required: true,
-        default: () => shortId.generate(5),
+        default: generateUniqueShortId,
     },
     clicks: {
         type: Number,
